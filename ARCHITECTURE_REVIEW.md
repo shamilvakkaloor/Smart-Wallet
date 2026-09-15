@@ -2,6 +2,8 @@
 
 Reviewed: 15 September 2026.
 
+> Follow-up: the OAuth account-model mismatch in finding 1 has now been corrected by `lib/auth-adapter.ts`, with regression tests covering identity lookup/link/unlink. The sections below record the original archive evaluation. Real Google login still requires hosting/database/OAuth configuration; see `HOSTINGER_SETUP.md`. Other findings remain open.
+
 ## Conclusion
 
 The archive is a useful V1 foundation, but it does **not** yet meet the architecture's V1 acceptance criteria and should not be treated as production-ready. The core entities and transaction structure broadly match the design. Authentication wiring, financial safeguards, and recovery need correction before real data is entered; several required workflows remain unimplemented.
