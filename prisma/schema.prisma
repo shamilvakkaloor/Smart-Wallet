@@ -1,0 +1,378 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AccountType {
+  CASH
+  BANK
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+  TRANSFER
+  EXCHANGE
+}
+
+enum TransactionStatus {
+  ACTIVE
+  VOIDED
+}
+
+enum CategoryType {
+  INCOME
+  EXPENSE
+}
+
+enum DebtAction {
+  MONEY_GIVEN
+  MONEY_RECEIVED_BACK
+  MONEY_BORROWED
+  MONEY_PAID_BACK
+  ADJUSTMENT
+}
+
+enum CurrencyMode {
+  OMR
+  INR
+  COMBINED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  VOID
+  RESTORE
+  ADJUST
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?     @map("email_verified")
+  image         String?
+  accounts      AuthAccount[]
+  sessions      Session[]
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  @@map("users")
+}
+
+model AuthAccount {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("auth_accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Currency {
+  id               String            @id @default(cuid())
+  code             String            @unique @db.VarChar(3)
+  name             String
+  symbol           String
+  decimalPlaces    Int               @default(2) @map("decimal_places")
+  status           RecordStatus      @default(ACTIVE)
+  accounts         Account[]
+  exchangeRates    ExchangeRate[]    @relation("RateBase")
+  quoteRates       ExchangeRate[]    @relation("RateQuote")
+  debtTransactions DebtTransaction[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@map("currencies")
+}
+
+model Account {
+  id               String                  @id @default(cuid())
+  type             AccountType
+  currencyId       String                  @map("currency_id")
+  bankName         String?                 @map("bank_name")
+  accountName      String                  @map("account_name")
+  status           RecordStatus            @default(ACTIVE)
+  currency         Currency                @relation(fields: [currencyId], references: [id])
+  openingBalance   OpeningBalance?
+  allocations      TransactionAllocation[]
+  transfersFrom    Transfer[]              @relation("TransferSource")
+  transfersTo      Transfer[]              @relation("TransferDestination")
+  exchangesFrom    Exchange[]              @relation("ExchangeSource")
+  exchangesTo      Exchange[]              @relation("ExchangeDestination")
+  debtTransactions DebtTransaction[]
+  createdAt        DateTime                @default(now()) @map("created_at")
+  updatedAt        DateTime                @updatedAt @map("updated_at")
+
+  @@unique([currencyId, type, accountName])
+  @@index([currencyId, status])
+  @@map("accounts")
+}
+
+model OpeningBalance {
+  id          String   @id @default(cuid())
+  accountId   String   @unique @map("account_id")
+  amount      Decimal  @db.Decimal(19, 4)
+  openingDate DateTime @map("opening_date") @db.Date
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("opening_balances")
+}
+
+model Transaction {
+  id              String                  @id @default(cuid())
+  reference       String                  @unique
+  type            TransactionType
+  transactionDate DateTime                @map("transaction_date") @db.Date
+  amount          Decimal                 @db.Decimal(19, 4)
+  currencyId      String?                 @map("currency_id")
+  categoryId      String?                 @map("category_id")
+  description     String
+  notes           String?                 @db.Text
+  status          TransactionStatus       @default(ACTIVE)
+  category        Category?               @relation(fields: [categoryId], references: [id])
+  allocations     TransactionAllocation[]
+  transfer        Transfer?
+  exchange        Exchange?
+  attachments     Attachment[]
+  createdAt       DateTime                @default(now()) @map("created_at")
+  updatedAt       DateTime                @updatedAt @map("updated_at")
+
+  @@index([transactionDate, status])
+  @@index([type, status])
+  @@map("transactions")
+}
+
+model TransactionAllocation {
+  id            String      @id @default(cuid())
+  transactionId String      @map("transaction_id")
+  accountId     String      @map("account_id")
+  amount        Decimal     @db.Decimal(19, 4)
+  transaction   Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  account       Account     @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@map("transaction_allocations")
+}
+
+model Transfer {
+  id                   String      @id @default(cuid())
+  transactionId        String      @unique @map("transaction_id")
+  sourceAccountId      String      @map("source_account_id")
+  destinationAccountId String      @map("destination_account_id")
+  amount               Decimal     @db.Decimal(19, 4)
+  transaction          Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  sourceAccount        Account     @relation("TransferSource", fields: [sourceAccountId], references: [id])
+  destinationAccount   Account     @relation("TransferDestination", fields: [destinationAccountId], references: [id])
+
+  @@index([sourceAccountId])
+  @@index([destinationAccountId])
+  @@map("transfers")
+}
+
+model Exchange {
+  id                          String      @id @default(cuid())
+  transactionId               String      @unique @map("transaction_id")
+  sourceAccountId             String      @map("source_account_id")
+  destinationAccountId        String      @map("destination_account_id")
+  sourceAmount                Decimal     @map("source_amount") @db.Decimal(19, 4)
+  exchangeRate                Decimal     @map("exchange_rate") @db.Decimal(24, 8)
+  calculatedDestinationAmount Decimal     @map("calculated_destination_amount") @db.Decimal(19, 4)
+  actualDestinationAmount     Decimal     @map("actual_destination_amount") @db.Decimal(19, 4)
+  transaction                 Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  sourceAccount               Account     @relation("ExchangeSource", fields: [sourceAccountId], references: [id])
+  destinationAccount          Account     @relation("ExchangeDestination", fields: [destinationAccountId], references: [id])
+  createdAt                   DateTime    @default(now()) @map("created_at")
+
+  @@map("exchanges")
+}
+
+model Category {
+  id           String        @id @default(cuid())
+  type         CategoryType
+  parentId     String?       @map("parent_id")
+  name         String
+  sortOrder    Int           @default(0) @map("sort_order")
+  status       RecordStatus  @default(ACTIVE)
+  parent       Category?     @relation("CategoryTree", fields: [parentId], references: [id])
+  children     Category[]    @relation("CategoryTree")
+  transactions Transaction[]
+  budgets      Budget[]
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@unique([type, parentId, name])
+  @@map("categories")
+}
+
+model Budget {
+  id             String       @id @default(cuid())
+  categoryId     String       @map("category_id")
+  currencyMode   CurrencyMode @map("currency_mode")
+  amount         Decimal      @db.Decimal(19, 4)
+  effectiveMonth DateTime?    @map("effective_month") @db.Date
+  isDefault      Boolean      @default(false) @map("is_default")
+  status         RecordStatus @default(ACTIVE)
+  category       Category     @relation(fields: [categoryId], references: [id])
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@index([categoryId, effectiveMonth, status])
+  @@map("budgets")
+}
+
+model Person {
+  id               String            @id @default(cuid())
+  name             String
+  contact          String?
+  status           RecordStatus      @default(ACTIVE)
+  debtTransactions DebtTransaction[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@map("people")
+}
+
+model DebtCategory {
+  id               String            @id @default(cuid())
+  name             String            @unique
+  sortOrder        Int               @default(0) @map("sort_order")
+  status           RecordStatus      @default(ACTIVE)
+  debtTransactions DebtTransaction[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+
+  @@map("debt_categories")
+}
+
+model DebtTransaction {
+  id              String            @id @default(cuid())
+  reference       String            @unique
+  personId        String            @map("person_id")
+  categoryId      String            @map("category_id")
+  action          DebtAction
+  currencyId      String            @map("currency_id")
+  accountId       String            @map("account_id")
+  amount          Decimal           @db.Decimal(19, 4)
+  transactionDate DateTime          @map("transaction_date") @db.Date
+  dueDate         DateTime?         @map("due_date") @db.Date
+  description     String
+  notes           String?           @db.Text
+  status          TransactionStatus @default(ACTIVE)
+  person          Person            @relation(fields: [personId], references: [id])
+  category        DebtCategory      @relation(fields: [categoryId], references: [id])
+  currency        Currency          @relation(fields: [currencyId], references: [id])
+  account         Account           @relation(fields: [accountId], references: [id])
+  attachments     Attachment[]
+  createdAt       DateTime          @default(now()) @map("created_at")
+  updatedAt       DateTime          @updatedAt @map("updated_at")
+
+  @@index([personId, currencyId, status])
+  @@map("debt_transactions")
+}
+
+model ExchangeRate {
+  id              String   @id @default(cuid())
+  baseCurrencyId  String   @map("base_currency_id")
+  quoteCurrencyId String   @map("quote_currency_id")
+  rate            Decimal  @db.Decimal(24, 8)
+  rateDate        DateTime @map("rate_date") @db.Date
+  source          String   @default("MANUAL")
+  baseCurrency    Currency @relation("RateBase", fields: [baseCurrencyId], references: [id])
+  quoteCurrency   Currency @relation("RateQuote", fields: [quoteCurrencyId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@unique([baseCurrencyId, quoteCurrencyId, rateDate])
+  @@map("exchange_rates")
+}
+
+model Attachment {
+  id                String           @id @default(cuid())
+  transactionId     String?          @map("transaction_id")
+  debtTransactionId String?          @map("debt_transaction_id")
+  fileName          String           @map("file_name")
+  storagePath       String           @map("storage_path")
+  mimeType          String           @map("mime_type")
+  fileSize          Int              @map("file_size")
+  transaction       Transaction?     @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  debtTransaction   DebtTransaction? @relation(fields: [debtTransactionId], references: [id], onDelete: Cascade)
+  uploadedAt        DateTime         @default(now()) @map("uploaded_at")
+
+  @@map("attachments")
+}
+
+model AuditLog {
+  id         String      @id @default(cuid())
+  recordType String      @map("record_type")
+  recordId   String      @map("record_id")
+  action     AuditAction
+  beforeData Json?       @map("before_data")
+  afterData  Json?       @map("after_data")
+  changedAt  DateTime    @default(now()) @map("changed_at")
+  changedBy  String      @map("changed_by")
+
+  @@index([recordType, recordId])
+  @@map("audit_logs")
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  type        String
+  relatedId   String?   @map("related_id")
+  message     String
+  status      String    @default("UNREAD")
+  scheduledAt DateTime? @map("scheduled_at")
+  sentAt      DateTime? @map("sent_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("notifications")
+}
+
+model AppSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}

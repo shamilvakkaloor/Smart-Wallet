@@ -1,0 +1,9 @@
+{
+  "name": "Smart Wallet",
+  "short_name": "Wallet",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#059669",
+  "icons": []
+}

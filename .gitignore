@@ -1,0 +1,13 @@
+node_modules
+.next
+.env
+.env.local
+coverage
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep
+*.log
+*.tsbuildinfo
+.env.*
+!.env.example

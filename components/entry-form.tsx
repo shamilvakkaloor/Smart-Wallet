@@ -1,0 +1,34 @@
+"use client";
+import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Account = { id: string; accountName: string; currencyId: string; currency: { code: string } };
+type Category = { id: string; name: string; type: "INCOME" | "EXPENSE" };
+type Currency = { id: string; code: string };
+
+export function EntryForm({ initialType, accounts, categories, currencies }: { initialType: string; accounts: Account[]; categories: Category[]; currencies: Currency[] }) {
+  const router = useRouter(); const validType = ["INCOME","EXPENSE","TRANSFER","EXCHANGE"].includes(initialType) ? initialType : "EXPENSE";
+  const [type, setType] = useState(validType); const [currencyId, setCurrencyId] = useState(currencies[0]?.id ?? "");
+  const [allocations, setAllocations] = useState([{ accountId: "", amount: "" }]); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const eligible = useMemo(() => accounts.filter((a) => a.currencyId === currencyId), [accounts, currencyId]);
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault(); setBusy(true); setError(""); const f = new FormData(e.currentTarget); let payload: Record<string, unknown>;
+    if (type === "INCOME" || type === "EXPENSE") payload = { type, transactionDate: f.get("transactionDate"), amount: Number(f.get("amount")), currencyId, categoryId: f.get("categoryId"), description: f.get("description"), notes: f.get("notes"), allocations: allocations.map((a) => ({ accountId: a.accountId, amount: Number(a.amount) })) };
+    else if (type === "TRANSFER") payload = { type, transactionDate: f.get("transactionDate"), sourceAccountId: f.get("sourceAccountId"), destinationAccountId: f.get("destinationAccountId"), amount: Number(f.get("amount")), description: f.get("description"), notes: f.get("notes") };
+    else payload = { type, transactionDate: f.get("transactionDate"), sourceAccountId: f.get("sourceAccountId"), destinationAccountId: f.get("destinationAccountId"), sourceAmount: Number(f.get("sourceAmount")), exchangeRate: Number(f.get("exchangeRate")), actualDestinationAmount: Number(f.get("actualDestinationAmount")), description: f.get("description"), notes: f.get("notes") };
+    const res = await fetch("/api/entries", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) }); const out = await res.json(); setBusy(false);
+    if (!res.ok) return setError(out.error ?? "Could not save."); router.push(`/entries/${out.id}`); router.refresh();
+  }
+  const today = new Date().toISOString().slice(0, 10);
+  return <form onSubmit={submit} className="card max-w-3xl space-y-5">
+    <div><label>Entry type</label><div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{["INCOME","EXPENSE","TRANSFER","EXCHANGE"].map((v) => <button type="button" onClick={() => setType(v)} key={v} className={type === v ? "btn-primary" : "btn-secondary"}>{v[0] + v.slice(1).toLowerCase()}</button>)}</div></div>
+    <div className="grid gap-4 sm:grid-cols-2"><div><label>Date</label><input name="transactionDate" type="date" defaultValue={today} required/></div>{(type === "INCOME" || type === "EXPENSE") && <div><label>Currency</label><select value={currencyId} onChange={(e) => { setCurrencyId(e.target.value); setAllocations([{ accountId: "", amount: "" }]); }}>{currencies.map((c) => <option key={c.id} value={c.id}>{c.code}</option>)}</select></div>}</div>
+    {(type === "INCOME" || type === "EXPENSE") && <><div className="grid gap-4 sm:grid-cols-2"><div><label>Total amount</label><input name="amount" type="number" min="0.0001" step="0.0001" required/></div><div><label>Category</label><select name="categoryId" required><option value="">Select category</option>{categories.filter((c) => c.type === type).map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div></div><div><div className="mb-2 flex items-center justify-between"><label className="mb-0">Account allocations</label><button type="button" className="text-sm font-semibold text-emerald-600" onClick={() => setAllocations([...allocations, { accountId: "", amount: "" }])}>+ Split</button></div>{allocations.map((line, i) => <div key={i} className="mb-2 grid grid-cols-[1fr_1fr_auto] gap-2"><select required value={line.accountId} onChange={(e) => setAllocations(allocations.map((x, n) => n === i ? { ...x, accountId: e.target.value } : x))}><option value="">Select account</option>{eligible.map((a) => <option key={a.id} value={a.id}>{a.accountName}</option>)}</select><input required type="number" min="0.0001" step="0.0001" placeholder="Amount" value={line.amount} onChange={(e) => setAllocations(allocations.map((x, n) => n === i ? { ...x, amount: e.target.value } : x))}/><button type="button" className="btn-secondary px-3" disabled={allocations.length === 1} onClick={() => setAllocations(allocations.filter((_, n) => n !== i))}>×</button></div>)}</div></>}
+    {type === "TRANSFER" && <div className="grid gap-4 sm:grid-cols-3"><AccountSelect name="sourceAccountId" label="From" accounts={accounts}/><AccountSelect name="destinationAccountId" label="To" accounts={accounts}/><div><label>Amount</label><input name="amount" type="number" min="0.0001" step="0.0001" required/></div></div>}
+    {type === "EXCHANGE" && <><div className="grid gap-4 sm:grid-cols-2"><AccountSelect name="sourceAccountId" label="Source account" accounts={accounts}/><AccountSelect name="destinationAccountId" label="Destination account" accounts={accounts}/></div><div className="grid gap-4 sm:grid-cols-3"><div><label>Source amount</label><input name="sourceAmount" type="number" min="0.0001" step="0.0001" required/></div><div><label>Exchange rate</label><input name="exchangeRate" type="number" min="0.00000001" step="0.00000001" required/></div><div><label>Actual received</label><input name="actualDestinationAmount" type="number" min="0.0001" step="0.0001" required/></div></div></>}
+    <div><label>Description</label><input name="description" maxLength={200} required placeholder="What was this for?"/></div><div><label>Notes</label><textarea name="notes" rows={3} placeholder="Optional details"/></div>
+    {error && <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700 dark:bg-rose-950 dark:text-rose-300">{error}</p>}<div className="flex gap-2"><button disabled={busy} className="btn-primary">{busy ? "Saving…" : "Save entry"}</button><button type="button" className="btn-secondary" onClick={() => router.back()}>Cancel</button></div>
+  </form>;
+}
+
+function AccountSelect({ name, label, accounts }: { name: string; label: string; accounts: Account[] }) { return <div><label>{label}</label><select name={name} required><option value="">Select account</option>{accounts.map((a) => <option key={a.id} value={a.id}>{a.accountName} ({a.currency.code})</option>)}</select></div>; }
