@@ -1,16 +1,21 @@
 import type { NextAuthConfig } from "next-auth";
-import Google from "next-auth/providers/google";
+import { loginVersion } from "./lib/password-login";
 
 export default {
-  providers: [Google],
+  providers: [],
+  session: { strategy: "jwt", maxAge: 8 * 60 * 60 },
   pages: { signIn: "/login", error: "/login" },
   callbacks: {
-    signIn({ profile }) {
-      const allowed = process.env.ALLOWED_EMAIL?.trim().toLowerCase();
-      return Boolean(allowed && profile?.email?.toLowerCase() === allowed);
+    async jwt({ token, user }) {
+      const version = await loginVersion();
+      if (!version) return null;
+      if (user) token.loginVersion = version;
+      if (token.loginVersion !== version) return null;
+      return token;
     },
     authorized({ auth, request }) {
-      const publicPath = request.nextUrl.pathname.startsWith("/login") || request.nextUrl.pathname.startsWith("/api/auth");
+      const path = request.nextUrl.pathname;
+      const publicPath = path === "/login" || path === "/api/auth" || path.startsWith("/api/auth/");
       return publicPath || Boolean(auth?.user);
     },
   },

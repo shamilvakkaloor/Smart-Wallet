@@ -1,6 +1,6 @@
 # Smart Wallet — Hostinger Edition
 
-Smart Wallet is a responsive, single-user, multi-currency personal finance application built with Next.js, TypeScript, Prisma, and MySQL. MySQL is the source of truth; Google OAuth restricts access to one configured email.
+Smart Wallet is a responsive, single-user, multi-currency personal finance application built with Next.js, TypeScript, Prisma, and MySQL. MySQL is the source of truth; A private user ID and password restrict access to the wallet owner.
 
 ## Working modules
 
@@ -13,9 +13,9 @@ Smart Wallet is a responsive, single-user, multi-currency personal finance appli
 - Balance versus Actual Balance calculation
 - Default and monthly budget records
 - Dashboard, journal, filters, detail view, reports, CSV export, audit trail, voiding, JSON export, SQL backup/restore scripts, and Data Health checks
-- Google single-account login and light/dark/system themes
+- Private user-ID/password login and light/dark/system themes
 
-Production services requiring operator configuration—Google OAuth, MySQL, SMTP, storage retention, and cron—are covered in `SETUP.md`.
+Production services requiring operator configuration—MySQL, login credentials, storage retention, and cron—are covered in `SETUP.md`.
 
 ## Quick start
 

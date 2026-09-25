@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { makeReference } from "@/lib/reference";
 import { exchangeSchema, normalEntrySchema, transferSchema } from "@/validation/finance";
 
-const actor = () => process.env.ALLOWED_EMAIL ?? "system";
+const actor = () => process.env.LOGIN_USER ?? "system";
 
 export async function createNormalEntry(raw: unknown) {
   const data = normalEntrySchema.parse(raw);

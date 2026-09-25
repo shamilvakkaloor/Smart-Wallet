@@ -1,10 +1,17 @@
 import NextAuth from "next-auth";
-import { walletAuthAdapter } from "@/lib/auth-adapter";
-import { db } from "@/lib/db";
+import Credentials from "next-auth/providers/credentials";
 import authConfig from "@/auth.config";
+import { createLoginVerifier } from "@/lib/password-login";
+
+const verifyLogin = createLoginVerifier();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: walletAuthAdapter(db),
-  session: { strategy: "jwt" },
+  providers: [Credentials({
+    credentials: {
+      username: { label: "User ID", type: "text" },
+      password: { label: "Password", type: "password" },
+    },
+    authorize: verifyLogin,
+  })],
 });

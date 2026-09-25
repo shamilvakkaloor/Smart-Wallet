@@ -1,12 +1,23 @@
 "use server";
 
+import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { voidTransaction } from "@/services/transaction-service";
 
-export async function login() { await signIn("google", { redirectTo: "/" }); }
+export async function login(_previous: string, form: FormData): Promise<string> {
+  try {
+    await signIn("credentials", {
+      username: form.get("username"), password: form.get("password"), redirectTo: "/",
+    });
+    return "";
+  } catch (error) {
+    if (error instanceof AuthError) return "Unable to sign in. Check your user ID and password. After repeated attempts, wait five minutes and try again.";
+    throw error; // Next.js uses a thrown redirect for a successful login.
+  }
+}
 export async function logout() { await signOut({ redirectTo: "/login" }); }
 
 export async function addAccount(form: FormData) {

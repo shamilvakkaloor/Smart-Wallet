@@ -1,78 +1,64 @@
-# Hostinger first-time setup
+# Smart Wallet — simple Hostinger setup
 
-Connecting GitHub deploys the source code. It does not create a database or Google OAuth credentials.
+Sign-in now uses your own **user ID and password**. Google setup is no longer needed.
 
-## 1. Check the deployment
+## 1. Set your login in Hostinger
 
-In hPanel, open Websites → your site's Dashboard → Deployments. Open the latest deployment and review its status and logs. Copy the public website URL for the Google configuration below.
+Open your website's environment-variable settings and enter:
 
-Use the repository root (the folder containing `package.json`), the Next.js framework, and Node.js 22. The project build script is `npm run build`. Hostinger installs dependencies during deployment. Do not select a static HTML-only deployment for this application.
-
-## 2. Create a MySQL database
-
-Create a database and a database user in Hostinger's database management area. Record the database hostname, port, full database name, full username and password privately. Grant that user access to this database. Use the hostname Hostinger provides; do not assume it is `localhost`.
-
-## 3. Configure Google login
-
-In Google Cloud Console, create/select a project, configure the OAuth consent screen and create an OAuth **Web application** client. While the consent app is in testing, add your own Google email as a test user.
-
-Add this authorized redirect URI, replacing the origin with your actual HTTPS site URL:
-
-```text
-https://YOUR-SITE/api/auth/callback/google
-```
-
-The scheme, domain and path must match exactly. Keep the client secret private.
-
-## 4. Add environment variables in Hostinger
-
-In the site's deployment settings, add these values. The values below are placeholders; do not use them literally or commit real values to GitHub.
-
-| Name | Value |
+| Name | What to enter |
 |---|---|
-| `DATABASE_URL` | `mysql://USERNAME:PASSWORD@HOST:3306/DATABASE` using Hostinger's details |
-| `AUTH_SECRET` | A securely generated random secret |
-| `AUTH_GOOGLE_ID` | Google OAuth client ID |
-| `AUTH_GOOGLE_SECRET` | Google OAuth client secret |
-| `ALLOWED_EMAIL` | Your exact Google email address |
-| `AUTH_URL` | Your public HTTPS site origin |
-| `APP_URL` | The same public HTTPS site origin |
+| `LOGIN_USER` | Your chosen user ID |
+| `LOGIN_PASSWORD` | Your chosen password, at least 12 characters |
+| `AUTH_SECRET` | A long random secret used to protect login sessions |
 | `AUTH_TRUST_HOST` | `true` |
-| `UPLOAD_DIR` | A durable writable directory outside public web files |
+| `DATABASE_URL` | Your Hostinger MySQL connection URL |
 
-URL-encode special characters in the username/password components of `DATABASE_URL`. Google credentials and database credentials are separate. `APP_URL` alone does not configure Auth.js's URL; `AUTH_URL` is recognized by the installed authentication library.
+Keep these values private in Hostinger. There is no default password. Do not add real credentials to GitHub. Old `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` and `ALLOWED_EMAIL` settings can be removed.
 
-Generate a secret on a computer with Node.js:
+If you need a new `AUTH_SECRET`, run this on a computer with Node.js and paste the output into Hostinger:
 
 ```sh
 node -e "console.log(require('node:crypto').randomBytes(32).toString('base64'))"
 ```
 
-Store this output directly in Hostinger; do not send it in chat.
+## 2. Set up the wallet database once
 
-## 5. Create the application's tables and starter data
+The app still needs MySQL to store your transactions. Create a database and database user in Hostinger, then set `DATABASE_URL` using those details:
 
-Once the database environment is configured, run these commands from the application project directory in an environment that can reach the Hostinger database:
+```text
+mysql://USERNAME:PASSWORD@HOST:3306/DATABASE
+```
+
+Use Hostinger's actual hostname and full database/user names. URL-encode special characters in the database username/password. These database credentials are separate from your app login.
+
+In a terminal with this project, its dependencies, and the database environment variable, run:
 
 ```sh
 npm run db:deploy
 npm run db:seed
 ```
 
-The commands need the project's dependencies and `DATABASE_URL`. If your plan provides SSH/application terminal access, use that. Otherwise, determine the supported migration execution method before proceeding; simply rebuilding the site does not run these commands. The existing build script generates Prisma Client but does not apply migrations or seed data.
+Use Hostinger SSH/application terminal if your plan provides it. If it does not, the same commands need to run in an environment allowed to connect to your database. Connecting GitHub alone does not create the database tables.
 
-Use `db:deploy` for production migrations, not `db:migrate` (which runs Prisma's development migration command).
+## 3. Redeploy and sign in
 
-## 6. Redeploy and verify
+Use the repository root, Next.js, Node.js 22, and the build command `npm run build`. Redeploy the latest `main` commit after saving the variables. Open your website and enter the user ID/password from step 1.
 
-Redeploy the latest GitHub commit after saving environment variables. Visit `/login`, sign in with the allowed email, and confirm OMR and INR wallets exist. If anything fails, inspect the deployment/runtime logs and share the error text with secrets removed.
+For uploaded receipts, also configure `UPLOAD_DIR` to a durable writable directory outside public web files.
 
-The code fix in `lib/auth-adapter.ts` routes OAuth identities to `auth_accounts`; no database-schema migration is required specifically for that fix. Initial database creation is still required.
+## Changing or resetting your password
 
-## References
+Change `LOGIN_PASSWORD` in Hostinger and redeploy. Existing login sessions will stop working. You can change `LOGIN_USER` the same way. There is no email reset flow or public registration.
 
-- [Hostinger deployment troubleshooting](https://www.hostinger.com/support/fix-failed-to-build-application-error-hostinger-node-js/)
-- [Hostinger environment-variable setup](https://www.hostinger.com/support/how-to-add-environment-variables-during-node-js-application-deployment/)
-- [Original project setup guide](SETUP.md)
+After ten unsuccessful login attempts, wait five minutes. Attempt limits are per server process; a deployment with multiple instances should also have a shared rate limit at the proxy/service layer.
 
-The architecture review still lists financial and other V1 gaps. Successful deployment is not confirmation that all V1 requirements are complete.
+## Local development
+
+Copy `.env.example` to `.env`, fill in the values, then run `npm ci`, `npm run db:generate`, the two database commands above, and `npm run dev`. Never commit `.env`.
+
+## What changed
+
+Authentication now uses an eight-hour signed/encrypted session and server-side credential validation. User ID matching is case-sensitive (outer whitespace is ignored); passwords are matched exactly. Missing login settings prevent sign-in. No database schema changes are needed for switching from Google to password login; existing wallet data is preserved. Legacy Google authentication tables can remain unused.
+
+Original supplied architecture/setup documents are retained under `docs/` as historical references. Their Google instructions no longer apply. Other financial feature limitations remain documented in `ARCHITECTURE_REVIEW.md`.

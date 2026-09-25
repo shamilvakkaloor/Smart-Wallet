@@ -5,7 +5,7 @@ This repository is a tested, deployable Smart Wallet V1 core implementation base
 ## Implemented end to end
 
 - Next.js responsive application and standalone production build
-- Google OAuth with an exact single-email allow-list
+- Private user-ID/password login configured through server environment variables
 - MySQL/Prisma schema, initial migration, and idempotent seed
 - OMR/INR and extensible currency setup with one automatic cash wallet per currency
 - Bank accounts and opening balances
@@ -26,7 +26,7 @@ This repository is a tested, deployable Smart Wallet V1 core implementation base
 
 ## Production configuration required
 
-- Google OAuth credentials and callback URLs
+- `LOGIN_USER`, `LOGIN_PASSWORD` (12+ characters), and `AUTH_SECRET`
 - Hostinger MySQL credentials
 - Durable `UPLOAD_DIR` for attachments
 - Hostinger cron for daily SQL backup

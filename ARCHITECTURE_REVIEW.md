@@ -2,6 +2,8 @@
 
 Reviewed: 15 September 2026.
 
+> 25 September update: at the owner's request, Google authentication has been replaced with private user-ID/password login. The OAuth adapter and its tests have been removed. Current setup: `HOSTINGER_SETUP.md`. The original findings below describe the imported archive; Google-related setup/fix notes are historical.
+
 > Follow-up: the OAuth account-model mismatch in finding 1 has now been corrected by `lib/auth-adapter.ts`, with regression tests covering identity lookup/link/unlink. The sections below record the original archive evaluation. Real Google login still requires hosting/database/OAuth configuration; see `HOSTINGER_SETUP.md`. Other findings remain open.
 
 ## Conclusion

@@ -16,7 +16,7 @@ export async function createDebtEntry(raw: unknown) {
       if (data.amount > opened - closed && !data.confirmOverpayment) throw new Error("OVERPAYMENT_CONFIRMATION_REQUIRED");
     }
     const entry = await tx.debtTransaction.create({ data: { reference: makeReference("DEB"), personId: data.personId, categoryId: data.categoryId, action: data.action, currencyId: data.currencyId, accountId: data.accountId, amount: data.amount, transactionDate: new Date(data.transactionDate), dueDate: data.dueDate ? new Date(data.dueDate) : null, description: data.description, notes: data.notes } });
-    await tx.auditLog.create({ data: { recordType: "DebtTransaction", recordId: entry.id, action: "CREATE", afterData: entry as unknown as Prisma.InputJsonValue, changedBy: process.env.ALLOWED_EMAIL ?? "system" } });
+    await tx.auditLog.create({ data: { recordType: "DebtTransaction", recordId: entry.id, action: "CREATE", afterData: entry as unknown as Prisma.InputJsonValue, changedBy: process.env.LOGIN_USER ?? "system" } });
     return entry;
   });
 }
