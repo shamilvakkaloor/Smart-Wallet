@@ -65,3 +65,11 @@ Copy `.env.example` to `.env`, fill in the values, then run `npm ci`, `npm run d
 Authentication now uses an eight-hour signed/encrypted session and server-side credential validation. User ID matching is case-sensitive (outer whitespace is ignored); passwords are matched exactly. Missing login settings prevent sign-in. No database schema changes are needed for switching from Google to password login; existing wallet data is preserved. Legacy Google authentication tables can remain unused.
 
 Original supplied architecture/setup documents are retained under `docs/` as historical references. Their Google instructions no longer apply. Other financial feature limitations remain documented in `ARCHITECTURE_REVIEW.md`.
+
+## Install on your phone or computer
+
+After deploying the latest version over HTTPS, open the site in Chrome. Use the **Install Smart Wallet** button when Chrome offers it, or Chrome's menu → **Install app** / **Add to Home screen**. The app opens in its own window with a wallet icon. Browser wording and prompt availability vary by device.
+
+Installation works from the login page; you do not need to sign in first. Wallet features still require internet access. Offline, the app shows a reconnect screen; it does not save financial pages, receipts or transactions for offline use. Normal browser session cookies keep login working in the installed app.
+
+For developers: the manifest is `public/manifest.webmanifest`, icons are in `public/icons`, and the service worker is `public/sw.js`. Only `offline.html` is stored in the service-worker cache. Increment its cache version when changing the offline screen. Public installation assets bypass login middleware; wallet and API routes remain protected.
