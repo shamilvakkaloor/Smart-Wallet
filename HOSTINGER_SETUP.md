@@ -32,14 +32,17 @@ mysql://USERNAME:PASSWORD@HOST:3306/DATABASE
 
 Use Hostinger's actual hostname and full database/user names. URL-encode special characters in the database username/password. These database credentials are separate from your app login.
 
-In a terminal with this project, its dependencies, and the database environment variable, run:
+In Hostinger's **Environment Variables**, click **Add more**:
 
-```sh
-npm run db:deploy
-npm run db:seed
-```
+| Key | Value |
+|---|---|
+| `RUN_DB_SETUP` | `true` |
 
-Use Hostinger SSH/application terminal if your plan provides it. If it does not, the same commands need to run in an environment allowed to connect to your database. Connecting GitHub alone does not create the database tables.
+Leave **Build command** as `npm run build`, **Package manager** as `npm`, and **Output directory** as `.next`. Click **Save and redeploy**. You do not need to paste terminal commands into Hostinger.
+
+The build generates Prisma Client, applies pending migrations, adds starter data, and builds the app. If database setup fails, the build stops and the deployment log explains the failure. The build environment must be able to reach the database hostname in `DATABASE_URL`.
+
+After the first successful setup, set `RUN_DB_SETUP` to `false` for ordinary deployments. Enable it again when deploying new database migrations. Re-running the existing seed does not delete wallet transactions or duplicate starter wallets/categories, but can reset starter-category ordering.
 
 ## 3. Redeploy and sign in
 
@@ -55,7 +58,7 @@ After ten unsuccessful login attempts, wait five minutes. Attempt limits are per
 
 ## Local development
 
-Copy `.env.example` to `.env`, fill in the values, then run `npm ci`, `npm run db:generate`, the two database commands above, and `npm run dev`. Never commit `.env`.
+Copy `.env.example` to `.env`, fill in the values, then run `npm ci`, `npm run db:generate`, `npm run db:deploy` and `npm run db:seed`, and `npm run dev`. Never commit `.env`.
 
 ## What changed
 
