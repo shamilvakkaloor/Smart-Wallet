@@ -6,6 +6,8 @@ import { debtEntrySchema } from "@/validation/finance";
 export async function createDebtEntry(raw: unknown) {
   const data = debtEntrySchema.parse(raw);
   return db.$transaction(async (tx) => {
+    const category = await tx.debtCategory.findUniqueOrThrow({ where: { id: data.categoryId } });
+    if (category.status !== "ACTIVE") throw new Error("Choose an active debt category.");
     const account = await tx.account.findUniqueOrThrow({ where: { id: data.accountId } });
     if (account.currencyId !== data.currencyId) throw new Error("The account and debt currency must match.");
     if (data.action === "MONEY_RECEIVED_BACK" || data.action === "MONEY_PAID_BACK") {

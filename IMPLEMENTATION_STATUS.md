@@ -36,7 +36,7 @@ This repository is a tested, deployable Smart Wallet V1 core implementation base
 
 These parts need a later implementation cycle because they require additional product rules or third-party/service configuration:
 
-- Full financial-field transaction editing UI (current safe correction workflow is void and recreate)
+- Debt-entry editing and corrections (income, expense, transfer, and exchange editing are implemented)
 - Excel and PDF exports (CSV and JSON are implemented)
 - Google Sheets import/export
 - Automated exchange-rate provider and full combined-currency report conversion
@@ -44,6 +44,17 @@ These parts need a later implementation cycle because they require additional pr
 - In-app/email notification scheduler and SMTP delivery
 - Debt-entry attachments (normal transaction attachments are implemented)
 - JSON restore through the browser (guarded SQL restore is implemented)
-- Account/category/person deactivate/delete administration
+- Account/person deactivate/delete administration (normal and debt category rename/delete are implemented)
 
 The database schema already contains the stable entities needed for these extensions. No parallel financial ledger should be introduced when adding them.
+
+
+## October 2026 entry and category update
+
+- Entries can be edited from the journal or detail page. Changes preserve the original reference, attachments, and before/after audit snapshots. Concurrent stale edits are rejected.
+- Delete removes an entry from balances/reports and the default journal; choose Deleted entries in the journal to review history.
+- Settings supports category and debt-category renaming/deletion. Referenced categories are archived, preserving existing entry relationships. Delete active subcategories before their parent.
+- Entry forms offer a parent category first and an optional dropdown of its children. Saving without a child assigns the parent category.
+- One account requires one amount. For a 20 OMR entry split between accounts, enter total 20 and account amounts such as cash 12 plus bank 8. These are parts of the same 20, not additional charges.
+- Starter data seeding skips an initialized database so deployments preserve renamed/deleted starter categories. No schema migration is needed for these features.
+- Tests cover financial validation, entry/category service behavior with mocked database transactions, and interactive entry forms. A live MySQL integration test remains outstanding.

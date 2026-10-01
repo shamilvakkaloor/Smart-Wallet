@@ -3,6 +3,10 @@ import { PrismaClient } from "@prisma/client";
 const db = new PrismaClient();
 
 async function main() {
+  if (await db.appSetting.findUnique({ where: { key: "currencyDisplay" } })) {
+    console.log("Starter data already initialized; preserving category changes.");
+    return;
+  }
   const omr = await db.currency.upsert({ where: { code: "OMR" }, update: {}, create: { code: "OMR", name: "Omani Rial", symbol: "ر.ع.", decimalPlaces: 3 } });
   const inr = await db.currency.upsert({ where: { code: "INR" }, update: {}, create: { code: "INR", name: "Indian Rupee", symbol: "₹", decimalPlaces: 2 } });
   for (const currency of [omr, inr]) {

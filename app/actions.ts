@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { signIn, signOut } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { voidTransaction } from "@/services/transaction-service";
 
 export async function login(_previous: string, form: FormData): Promise<string> {
   try {
@@ -42,20 +41,12 @@ export async function addCurrency(form: FormData) {
   revalidatePath("/settings"); revalidatePath("/wallets");
 }
 
-export async function addCategory(form: FormData) {
-  await db.category.create({ data: { name: String(form.get("name") ?? "").trim(), type: String(form.get("type")) as "INCOME" | "EXPENSE", parentId: String(form.get("parentId") ?? "") || null } });
-  revalidatePath("/settings");
-}
 
 export async function addPerson(form: FormData) {
   await db.person.create({ data: { name: String(form.get("name") ?? "").trim(), contact: String(form.get("contact") ?? "").trim() || null } });
   revalidatePath("/debt"); revalidatePath("/settings");
 }
 
-export async function addDebtCategory(form: FormData) {
-  await db.debtCategory.create({ data: { name: String(form.get("name") ?? "").trim() } });
-  revalidatePath("/settings");
-}
 
 export async function addExchangeRate(form: FormData) {
   await db.exchangeRate.upsert({
@@ -71,10 +62,6 @@ export async function addBudget(form: FormData) {
   revalidatePath("/budgets");
 }
 
-export async function voidEntry(form: FormData) {
-  await voidTransaction(String(form.get("id")));
-  revalidatePath("/entries"); revalidatePath("/");
-}
 
 export async function goToNewEntry(form: FormData) {
   redirect(`/entries/new?type=${String(form.get("type") ?? "EXPENSE")}`);

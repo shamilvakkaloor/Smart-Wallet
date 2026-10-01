@@ -171,3 +171,7 @@ The supplied status file acknowledges many feature omissions, but its opening de
 6. Complete attachment recovery, export formats, notifications and a tested restore workflow.
 
 V2-only features such as recurring transactions, OCR, offline/PWA and family mode are not counted as V1 omissions.
+
+## Follow-up: October 2026 entry and category management
+
+The findings above describe the original review. Income, expense, transfer, and exchange entries now have edit/delete controls, version checks, and full before/after audit snapshots. Category and debt-category rename/delete management and parent-first optional subcategory selection are implemented. Normal/exchange account status and normal/debt category status are validated. Historical entries may retain their existing archived category during editing. Account/person lifecycle administration, debt-entry corrections, and an old/new audit comparison viewer remain outstanding.
