@@ -68,7 +68,7 @@ Original supplied architecture/setup documents are retained under `docs/` as his
 
 ## Install on your phone or computer
 
-After deploying the latest version over HTTPS, open the site in Chrome. Use the **Install Smart Wallet** button when Chrome offers it, or Chrome's menu → **Install app** / **Add to Home screen**. The app opens in its own window with a wallet icon. Browser wording and prompt availability vary by device.
+After deploying the latest version over HTTPS, open the site in Chrome. Use Chrome's address-bar install icon when available, or Chrome's menu → **Install app** / **Add to Home screen**. The app opens in its own window with a wallet icon. Browser wording and prompt availability vary by device.
 
 Installation works from the login page; you do not need to sign in first. Wallet features still require internet access. Offline, the app shows a reconnect screen; it does not save financial pages, receipts or transactions for offline use. Normal browser session cookies keep login working in the installed app.
 
