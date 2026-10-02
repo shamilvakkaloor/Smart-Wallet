@@ -1,7 +1,10 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#059669"/>
-  <rect x="113" y="152" width="286" height="218" rx="36" fill="#fff"/>
-  <path d="M135 152v-22a22 22 0 0 1 22-22h180a22 22 0 0 1 22 22v22" fill="none" stroke="#d1fae5" stroke-width="22"/>
-  <rect x="289" y="217" width="120" height="86" rx="22" fill="#064e3b"/>
-  <circle cx="324" cy="260" r="13" fill="#fff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 512 512">
+ <defs><linearGradient id="emerald" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#10b981"/><stop offset="1" stop-color="#047857"/></linearGradient><linearGradient id="shine" x1="0" y1="0" x2="0" y2="1"><stop stop-color="#fff" stop-opacity=".25"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>
+ <rect width="512" height="512" rx="112" fill="url(#emerald)"/>
+ <rect x="10" y="10" width="492" height="492" rx="105" fill="none" stroke="url(#shine)" stroke-width="3"/>
+ <path d="M345 163H207c-45 0-73 24-73 58s28 52 69 52h105c25 0 43 14 43 36s-18 40-44 40H166" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+ <path d="M158 182v-28c0-16 13-29 29-29h118" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="17" stroke-linecap="round"/>
+ <path d="M135 233v93c0 26 19 46 46 46h164c29 0 48-20 48-46v-99" fill="none" stroke="#fff" stroke-opacity=".85" stroke-width="17" stroke-linecap="round"/>
+ <rect x="326" y="214" width="74" height="58" rx="20" fill="#064e3b"/>
+ <circle cx="351" cy="243" r="8" fill="#fff"/>
 </svg>

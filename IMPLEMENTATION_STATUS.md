@@ -58,3 +58,13 @@ The database schema already contains the stable entities needed for these extens
 - One account requires one amount. For a 20 OMR entry split between accounts, enter total 20 and account amounts such as cash 12 plus bank 8. These are parts of the same 20, not additional charges.
 - Starter data seeding skips an initialized database so deployments preserve renamed/deleted starter categories. No schema migration is needed for these features.
 - Tests cover financial validation, entry/category service behavior with mocked database transactions, and interactive entry forms. A live MySQL integration test remains outstanding.
+
+
+## Calm Ledger interface update
+
+- Locally bundled Inter typography, shared light/dark colors, line icons, responsive cards, table styling and accessible focus states.
+- Collapsible desktop sidebar and a complete mobile More menu, including theme controls, sign-out and Backup & Restore; mobile Add sheet exposes all four existing entry types.
+- Dashboard currency selection, independent currency charts, balance explanations using the implemented formula, and monthly activity selection. Account balances are explicitly current, regardless of the activity month.
+- Refreshed wallet cards, reports, entry forms, Settings navigation and login screen. Only the entry amount remains tinted, with category and optional subcategory alongside it.
+- New vector logo and PWA icon package; Chrome-native install behavior remains intact. Generic loading/error/offline states.
+- Design documentation and isolated sample-data preview in design/README.md. Browser checks cover desktop/mobile overflow, complete mobile navigation, sidebar collapse, themes and entry-field alignment. Live MySQL integration was not exercised by the visual preview.

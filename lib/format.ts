@@ -1,5 +1,5 @@
 export function money(value: number, code: string, decimals = code === "OMR" ? 3 : 2) {
-  return new Intl.NumberFormat("en", { style: "currency", currency: code, minimumFractionDigits: decimals }).format(value);
+  return new Intl.NumberFormat(code === "INR" ? "en-IN" : "en-GB", { style: "currency", currency: code, minimumFractionDigits: decimals }).format(value);
 }
 
 export function asNumber(value: unknown) {

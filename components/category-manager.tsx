@@ -1,4 +1,5 @@
 "use client";
+import { Tags, HandCoins } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -26,8 +27,8 @@ export function CategoryManager({ kind, categories }: { kind: "normal" | "debt";
     finally { setBusy(false); }
   }
   const ordered = kind === "debt" ? categories : categories.filter(c => !c.parentId).flatMap(parent => [parent, ...categories.filter(c => c.parentId === parent.id)]);
-  return <section className="card">
-    <h2 className="mb-3 font-semibold">{kind === "debt" ? "Debt categories" : "Categories"}</h2>
+  return <section id={kind === "normal" ? "categories" : "debt-categories"} className="card scroll-mt-6">
+    <h2 className="mb-3 flex items-center gap-2 font-semibold">{kind === "normal" ? <Tags size={19} className="text-emerald-700"/> : <HandCoins size={19} className="text-emerald-700"/>}{kind === "debt" ? "Debt categories" : "Categories"}</h2>
     <p className="mb-4 text-sm text-slate-500">{kind === "normal" ? "Choose a category first when recording an entry. A subcategory is optional. Delete subcategories before their parent." : "Labels for loans, borrowing, and repayments."}</p>
     <fieldset disabled={busy} className="min-w-0">
       <div className="mb-5 max-h-80 overflow-y-auto divide-y dark:divide-slate-800">
@@ -37,8 +38,8 @@ export function CategoryManager({ kind, categories }: { kind: "normal" | "debt";
             <button className="btn-primary">Save</button><button type="button" className="btn-secondary" onClick={() => setEditing(null)}>Cancel</button>
           </form> : <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
             <span>{c.parentId ? "↳ " : ""}{c.name} <span className="text-xs text-slate-400">{c.type}</span></span>
-            <div className="flex gap-3"><button type="button" className="text-emerald-600" aria-label={`Edit ${c.name}`} onClick={() => { setEditing(c.id); setRename(c.name); setMessage(""); }}>Edit</button>
-              <button type="button" className="text-rose-600" aria-label={`Delete ${c.name}`} onClick={() => { if (window.confirm(`Delete ${c.name}? It will no longer be offered for new entries. Existing entries keep their category.`)) void save("DELETE", { id: c.id }); }}>Delete</button></div>
+            <div className="flex gap-3"><button type="button" className="min-h-11 px-2 text-emerald-700" aria-label={`Edit ${c.name}`} onClick={() => { setEditing(c.id); setRename(c.name); setMessage(""); }}>Edit</button>
+              <button type="button" className="min-h-11 px-2 text-rose-600" aria-label={`Delete ${c.name}`} onClick={() => { if (window.confirm(`Delete ${c.name}? It will no longer be offered for new entries. Existing entries keep their category.`)) void save("DELETE", { id: c.id }); }}>Delete</button></div>
           </div>}
         </div>)}
         {!ordered.length && <p className="text-sm text-slate-500">No categories yet.</p>}
