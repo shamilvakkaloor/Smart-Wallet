@@ -50,7 +50,7 @@ export const debtEntrySchema = z.object({
   personId: z.string().min(1), categoryId: z.string().min(1),
   action: z.enum(["MONEY_GIVEN", "MONEY_RECEIVED_BACK", "MONEY_BORROWED", "MONEY_PAID_BACK"]),
   currencyId: z.string().min(1), accountId: z.string().min(1), amount,
-  transactionDate: dateString, dueDate: z.string().optional(),
+  transactionDate: dateString, dueDate: z.union([dateString, z.literal("")]).optional(),
   description: z.string().trim().min(1).max(200), notes: z.string().max(5000).optional().default(""),
   confirmOverpayment: z.boolean().optional().default(false),
 });

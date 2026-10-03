@@ -35,3 +35,7 @@ The live app uses the Calm Ledger visual system. All financial values on product
 To inspect locally, run `npm run design:preview`, then open `http://127.0.0.1:4173`. The `/brand.html` page shows the identity board. `npm run design:check` captures the pages using installed Google Chrome and checks mobile navigation and horizontal overflow. These tools never deploy changes or modify production records.
 
 The production deployment requires no new environment variables or schema changes. Existing installed PWAs may refresh their icon on the browser's own update schedule.
+
+## Reports and debt corrections
+
+With the preview running, `node scripts/check-reports.mjs` captures monthly, yearly, subcategory and debt-edit views on desktop/mobile and checks overflow, report headings and debt prefill. Screenshots use fictional fixture data; the preview database does not execute production query filters. Query and calculation behavior is covered separately by the report tests.

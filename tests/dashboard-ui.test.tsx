@@ -10,9 +10,9 @@ afterEach(cleanup);
 it("filters balance cards and charts to the chosen currency and restores both", () => {
   render(<DashboardOverview position={position} activity={[]} monthLabel="October 2026"/>);
   expect(screen.getByLabelText("OMR chart")).toBeTruthy(); expect(screen.getByLabelText("INR chart")).toBeTruthy();
-  fireEvent.click(screen.getByRole("button", { name: "OMR", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "OMR" }));
   expect(screen.queryByLabelText("INR chart")).toBeNull(); expect(screen.queryByText("Indian Rupee")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Both", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Both" }));
   expect(screen.getByLabelText("INR chart")).toBeTruthy();
 });
 it("explains the real balance formula and offers an empty-state action", () => {

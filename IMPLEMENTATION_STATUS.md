@@ -36,7 +36,6 @@ This repository is a tested, deployable Smart Wallet V1 core implementation base
 
 These parts need a later implementation cycle because they require additional product rules or third-party/service configuration:
 
-- Debt-entry editing and corrections (income, expense, transfer, and exchange editing are implemented)
 - Excel and PDF exports (CSV and JSON are implemented)
 - Google Sheets import/export
 - Automated exchange-rate provider and full combined-currency report conversion
@@ -68,3 +67,11 @@ The database schema already contains the stable entities needed for these extens
 - Refreshed wallet cards, reports, entry forms, Settings navigation and login screen. Only the entry amount remains tinted, with category and optional subcategory alongside it.
 - New vector logo and PWA icon package; Chrome-native install behavior remains intact. Generic loading/error/offline states.
 - Design documentation and isolated sample-data preview in design/README.md. Browser checks cover desktop/mobile overflow, complete mobile navigation, sidebar collapse, themes and entry-field alignment. Live MySQL integration was not exercised by the visual preview.
+
+## Debt editing and summary reports
+
+- Debt & Credit activity now has Edit links. Corrections preserve reference and attachments, record before/after audit snapshots, reject stale edits and validate currency/account relationships. Reducing or moving a loan checks affected repayments; worsening an overpaid position requires confirmation.
+- Reports offers Monthly (Cash / Bank / Total), Yearly (January–December), Custom date range and Complete (all-time) views. Choose category roll-up or separate subcategory rows; direct parent entries remain separately identifiable in subcategory mode.
+- Filters cover year/month/dates, currency, account/type, income/expense, parent/subcategory (including parent only), description/notes/reference, amount range and zero categories. Currencies remain separate. Split-account filters include only matching allocations; amount bounds apply to the original whole entry.
+- Summary CSV and Entries CSV use the same filters. All matching entries contribute to totals/exports; the expandable entry list shows 50 per page. Reports exclude transfers, currency exchange, debt movements and account opening balances; report net is income minus expense, not a wallet balance.
+- No schema migration or new environment variables. 69 automated tests pass, including financial aggregates, date boundaries, CSV safety, protected endpoints and debt correction confirmation. Desktop/mobile preview checks use fictional data; live Hostinger/MySQL integration is not verified locally.
