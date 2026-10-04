@@ -6,7 +6,7 @@ import { debtEntrySchema } from "@/validation/finance";
 type DebtData = z.infer<typeof debtEntrySchema>;
 const snapshot = (v: unknown) => JSON.parse(JSON.stringify(v)) as Prisma.InputJsonValue;
 
-export function worsensOverpayment(prior: Pick<DebtTransaction, "personId" | "currencyId" | "action" | "amount">[], data: DebtData, before?: DebtTransaction) {
+export function worsensOverpayment(prior: Pick<DebtTransaction, "personId" | "currencyId" | "action" | "amount">[], data: Pick<DebtTransaction, "personId" | "currencyId" | "action"> & { amount: number }, before?: DebtTransaction) {
   const pairs = new Map<string, { personId: string; currencyId: string }>();
   for (const row of [data, ...(before ? [before] : [])]) pairs.set(`${row.personId}:${row.currencyId}`, row);
   for (const pair of pairs.values()) {
@@ -57,6 +57,23 @@ export async function updateDebtEntry(id: string, raw: unknown) {
     if (changed.count !== 1) throw new Error("This debt entry changed. Reload before editing.");
     const after = await tx.debtTransaction.findUniqueOrThrow({ where: { id } });
     await tx.auditLog.create({ data: { recordType: "DebtTransaction", recordId: id, action: "UPDATE", beforeData: snapshot(before), afterData: snapshot(after), changedBy: process.env.LOGIN_USER ?? "system" } });
+    return after;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export async function voidDebtEntry(id: string, raw: unknown) {
+  const { updatedAt, confirmOverpayment } = z.object({ updatedAt: z.string().datetime(), confirmOverpayment: z.boolean().default(false) }).parse(raw);
+  return db.$transaction(async tx => {
+    const before = await tx.debtTransaction.findUniqueOrThrow({ where: { id } });
+    if (before.status === "VOIDED") return before;
+    if (before.updatedAt.getTime() !== new Date(updatedAt).getTime()) throw new Error("This debt entry changed. Reload before voiding.");
+    const prior = await tx.debtTransaction.findMany({ where: { status: "ACTIVE", id: { not: id }, personId: before.personId, currencyId: before.currencyId } });
+    const removed = { ...before, amount: 0, transactionDate: before.transactionDate.toISOString().slice(0,10), dueDate: "", notes: before.notes ?? "" };
+    if (!confirmOverpayment && worsensOverpayment(prior, removed, before)) throw new Error("OVERPAYMENT_CONFIRMATION_REQUIRED");
+    const changed = await tx.debtTransaction.updateMany({ where: { id, status: "ACTIVE", updatedAt: new Date(updatedAt) }, data: { status: "VOIDED", updatedAt: new Date(Math.max(Date.now(), before.updatedAt.getTime()+1)) } });
+    if (changed.count !== 1) throw new Error("This debt entry changed. Reload before voiding.");
+    const after = await tx.debtTransaction.findUniqueOrThrow({ where: { id } });
+    await tx.auditLog.create({ data: { recordType: "DebtTransaction", recordId: id, action: "VOID", beforeData: snapshot(before), afterData: snapshot(after), changedBy: process.env.LOGIN_USER ?? "system" } });
     return after;
   }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 }

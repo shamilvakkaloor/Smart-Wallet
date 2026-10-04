@@ -12,3 +12,9 @@ render(<DebtForm people={[{id:'p1',name:'Alex'}]} categories={[{id:'loan',name:'
 expect((screen.getByLabelText('Amount') as HTMLInputElement).value).toBe('50');fireEvent.change(screen.getByLabelText('Amount'),{target:{value:'25'}});fireEvent.click(screen.getByRole('button',{name:'Save changes'}));await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(2));
 const payloads=fetch.mock.calls.map(c=>JSON.parse(c[1].body));expect(payloads[0]).toMatchObject({amount:25,updatedAt:entry.updatedAt,notes:'Original note',confirmOverpayment:false});expect(payloads[1]).toEqual({...payloads[0],confirmOverpayment:true});expect(fetch.mock.calls[0][0]).toBe('/api/debt/d1');expect(fetch.mock.calls[0][1].method).toBe('PATCH');await waitFor(()=>expect(mocks.push).toHaveBeenCalledWith('/debt'));
 });
+
+it('cancels void without a request, then sends the saved version after confirmation',async()=>{
+ const fetch=vi.fn().mockResolvedValue({ok:true,json:async()=>({id:'d1'})});vi.stubGlobal('fetch',fetch);const confirm=vi.spyOn(window,'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+ render(<DebtForm people={[]} categories={[]} currencies={[]} accounts={[]} entry={entry}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Void debt entry'}));expect(fetch).not.toHaveBeenCalled();fireEvent.click(screen.getByRole('button',{name:'Void debt entry'}));await waitFor(()=>expect(fetch).toHaveBeenCalledTimes(1));expect(confirm).toHaveBeenCalledTimes(2);expect(fetch.mock.calls[0][1].method).toBe('DELETE');expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({updatedAt:entry.updatedAt,confirmOverpayment:false});
+});

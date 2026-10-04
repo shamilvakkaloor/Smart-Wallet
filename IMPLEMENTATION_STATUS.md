@@ -75,3 +75,8 @@ The database schema already contains the stable entities needed for these extens
 - Filters cover year/month/dates, currency, account/type, income/expense, parent/subcategory (including parent only), description/notes/reference, amount range and zero categories. Currencies remain separate. Split-account filters include only matching allocations; amount bounds apply to the original whole entry.
 - Summary CSV and Entries CSV use the same filters. All matching entries contribute to totals/exports; the expandable entry list shows 50 per page. Reports exclude transfers, currency exchange, debt movements and account opening balances; report net is income minus expense, not a wallet balance.
 - No schema migration or new environment variables. 69 automated tests pass, including financial aggregates, date boundaries, CSV safety, protected endpoints and debt correction confirmation. Desktop/mobile preview checks use fictional data; live Hostinger/MySQL integration is not verified locally.
+
+## Void debt entries
+
+- Debt edit screens include a confirmed Void debt entry action. It marks the record VOIDED, preserves the original data and before/after audit history, and removes the entry from active activity and balance calculations. No physical deletion or database migration.
+- Version checks prevent stale or concurrent requests from voiding newer corrections. Voiding a loan that leaves excess repayments requires additional confirmation.

@@ -6,6 +6,21 @@ export type EditableDebt = { id: string; updatedAt: string; personId: string; ca
 type Props = { people: { id: string; name: string }[]; categories: { id: string; name: string }[]; currencies: { id: string; code: string }[]; accounts: { id: string; accountName: string; currencyId: string }[]; entry?: EditableDebt };
 export function DebtForm({ people, categories, currencies, accounts, entry }: Props) {
   const router = useRouter(); const [currencyId, setCurrency] = useState(entry?.currencyId ?? currencies[0]?.id ?? ""); const [accountId,setAccountId] = useState(entry?.accountId ?? ""); const [error, setError] = useState(""); const [busy, setBusy] = useState(false);
+  async function voidEntry() {
+    if (!entry || busy || !window.confirm("Void this debt entry? It will stop affecting account and debt balances. Its record and audit history will be kept. Unsaved edits will be discarded.")) return;
+    setBusy(true); setError("");
+    try {
+      const payload = { updatedAt: entry.updatedAt, confirmOverpayment: false };
+      const send = () => fetch(`/api/debt/${entry.id}`, { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      let response = await send(); let result = await response.json();
+      if (!response.ok && result.error === "OVERPAYMENT_CONFIRMATION_REQUIRED") {
+        if (!window.confirm("Voiding this loan would leave repayments greater than the remaining recorded loan. Void it anyway?")) { setError("Entry was not voided."); return; }
+        payload.confirmOverpayment = true; response = await send(); result = await response.json();
+      }
+      if (!response.ok) { setError(result.error ?? "Could not void debt entry."); return; }
+      router.push("/debt"); router.refresh();
+    } catch { setError("Could not reach the server. Please try again."); } finally { setBusy(false); }
+  }
   async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault(); const form = new FormData(e.currentTarget);
     const payload = { ...Object.fromEntries(form), amount: Number(form.get("amount")), currencyId, accountId, updatedAt: entry?.updatedAt, confirmOverpayment: false };
@@ -33,6 +48,7 @@ export function DebtForm({ people, categories, currencies, accounts, entry }: Pr
     <div className="sm:col-span-2"><label htmlFor="debt-description">Description</label><input id="debt-description" name="description" maxLength={200} defaultValue={entry?.description} required/></div>
     <div className="sm:col-span-2"><label htmlFor="debt-notes">Notes</label><textarea id="debt-notes" name="notes" maxLength={5000} rows={2} defaultValue={entry?.notes}/></div>
     {error && <p role="alert" className="text-sm text-rose-600 sm:col-span-2">{error}</p>}
-    <div className="flex gap-2 sm:col-span-2"><button className="btn-primary">{busy ? "Saving…" : entry ? "Save changes" : "Save debt entry"}</button>{entry && <Link className="btn-secondary" href="/debt">Cancel</Link>}</div>
+    <div className="flex flex-wrap gap-2 sm:col-span-2"><button className="btn-primary">{busy ? "Saving…" : entry ? "Save changes" : "Save debt entry"}</button>{entry && <Link className="btn-secondary" href="/debt">Cancel</Link>}</div>
+    {entry && <div className="sm:col-span-2 mt-4 border-t border-slate-200 pt-4 dark:border-slate-700"><button type="button" onClick={voidEntry} className="btn-secondary text-rose-700 dark:text-rose-300">Void debt entry</button><p className="mt-2 text-sm text-muted">Remove this entry from balances while keeping its record and audit history.</p></div>}
   </fieldset></form>;
 }
