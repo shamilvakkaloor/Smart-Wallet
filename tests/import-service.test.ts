@@ -1,0 +1,10 @@
+import {afterEach,beforeEach,expect,it,vi} from 'vitest';
+const mocks=vi.hoisted(()=>({find:vi.fn(),create:vi.fn(),transaction:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:mocks.transaction}}));vi.mock('@/services/transaction-service',()=>({createEntryInTransaction:mocks.create}));
+import {commitImport,importToken,verifyImportToken} from '../services/import-service';
+import type {ImportRow} from '../lib/import-workbook';
+const rows=[{row:5,reference:'IMP-a',data:{type:'INCOME',amount:10},account:'Cash',category:'Salary',summary:[]},{row:6,reference:'IMP-b',data:{type:'INCOME',amount:20},account:'Cash',category:'Salary',summary:[]}] as unknown as ImportRow[];
+beforeEach(()=>{vi.resetAllMocks();mocks.transaction.mockImplementation(fn=>fn({transaction:{findMany:mocks.find}}));mocks.find.mockResolvedValue([]);vi.stubEnv('AUTH_SECRET','test-secret')});afterEach(()=>vi.unstubAllEnvs());
+it('requires a valid unexpired preview matching the exact parsed rows',()=>{const token=importToken(rows,1000);expect(()=>verifyImportToken(token,rows,1001)).not.toThrow();expect(()=>verifyImportToken(token,rows,9999999)).toThrow();expect(()=>verifyImportToken(token,[...rows].reverse(),1001)).toThrow();expect(()=>verifyImportToken(token.slice(0,-1)+'x',rows,1001)).toThrow()});
+it('skips prior imports including voided entries and writes a batch in one transaction',async()=>{mocks.find.mockResolvedValue([{reference:'IMP-a'}]);expect(await commitImport(rows)).toEqual({imported:1,skipped:1});expect(mocks.create).toHaveBeenCalledTimes(1);expect(mocks.create.mock.calls[0][2]).toBe('IMP-b');expect(mocks.transaction.mock.calls[0][1]).toMatchObject({isolationLevel:'Serializable'})});
+it('propagates a row failure to abort the batch transaction',async()=>{mocks.create.mockRejectedValue(new Error('Account inactive'));await expect(commitImport(rows)).rejects.toThrow('Account inactive')});

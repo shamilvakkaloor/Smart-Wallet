@@ -1,5 +1,5 @@
 import { Prisma } from "@prisma/client";
-import type { ReportFilters } from "@/validation/reports";
+import { selections, matchesSelection, type ReportFilters } from "@/validation/reports";
 export type ReportCategory = {id:string; name:string; type:string; parentId:string|null; status:string};
 export type ReportCurrency = {id:string; code:string; decimalPlaces:number};
 export type ReportEntry = {id:string;reference:string;transactionDate:Date;type:string;currencyId:string|null;categoryId:string|null;description:string;amount:Prisma.Decimal|number;allocations:{amount:Prisma.Decimal|number;account:{id:string;type:string;accountName:string}}[]};
@@ -17,15 +17,15 @@ export function buildReports(entries:ReportEntry[],categories:ReportCategory[],c
     if(!category)return {id:'uncategorized',label:'Uncategorized'};
     return f.grouping==='category'?{id:parent?.id??category.id,label:parent?.name??category.name}:{id:category.id,label:parent?`${parent.name} / ${category.name}`:`${category.name} / General (no subcategory)`};
   };
-  return currencies.filter(c=>!f.currencyId||c.id===f.currencyId).map(currency=>{
+  return currencies.filter(c=>matchesSelection(f.currencyId,c.id)).map(currency=>{
     const groups=new Map<string,{id:string;label:string;type:string;value:Accumulator}>();const totals={INCOME:empty(),EXPENSE:empty()};const details:ReportDetail[]=[];
     if(f.showZero==='1')for(const c of categories){
-      if(c.status!=='ACTIVE'||(f.type&&f.type!==c.type)||(f.categoryId&&c.id!==f.categoryId&&c.parentId!==f.categoryId)||(f.subcategoryId&&c.id!==(f.subcategoryId==='__parent__'?f.categoryId:f.subcategoryId)))continue;
+      if(c.status!=='ACTIVE'||(!matchesSelection(f.type,c.type))||(f.categoryId&&!selections(f.categoryId).includes(c.id)&&!selections(f.categoryId).includes(c.parentId??""))||(f.subcategoryId&&!selections(f.subcategoryId).includes(c.id)&&!(selections(f.subcategoryId).includes('__parent__')&&selections(f.categoryId).includes(c.id))))continue;
       const b=bucket(c.id);const key=`${c.type}:${b.id}`;if(!groups.has(key))groups.set(key,{...b,type:c.type,value:empty()});
     }
     for(const entry of entries){
       if(entry.currencyId!==currency.id || (entry.type!=='INCOME'&&entry.type!=='EXPENSE'))continue;
-      const lines=entry.allocations.filter(a=>(!f.accountId||a.account.id===f.accountId)&&(!f.accountType||a.account.type===f.accountType));
+      const lines=entry.allocations.filter(a=>(matchesSelection(f.accountId,a.account.id))&&(matchesSelection(f.accountType,a.account.type)));
       if(!lines.length)continue;
       const b=bucket(entry.categoryId);const key=`${entry.type}:${b.id}`;
       if(!groups.has(key))groups.set(key,{...b,type:entry.type,value:empty()});

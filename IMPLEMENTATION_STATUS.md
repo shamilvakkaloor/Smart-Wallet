@@ -80,3 +80,13 @@ The database schema already contains the stable entities needed for these extens
 
 - Debt edit screens include a confirmed Void debt entry action. It marks the record VOIDED, preserves the original data and before/after audit history, and removes the entry from active activity and balance calculations. No physical deletion or database migration.
 - Version checks prevent stale or concurrent requests from voiding newer corrections. Voiding a loan that leaves excess repayments requires additional confirmation.
+
+## Excel imports, checkbox filters and empty states
+
+- Entries provides Download Excel and Import Excel. Templates include active accounts (with currency/type), entry types, type-dependent parent categories and parent-dependent subcategories. Fill up to 200 transactions per .xlsx file (2 MB maximum). Optional second-account splits, transfers and currency exchanges are supported. Debt entries remain in Debt & Credit.
+- Uploads have a read-only preview, row-specific errors and an explicit confirmation. The complete batch is saved in one serializable database transaction using normal entry validation, allocations and audit logging. Stable template Import IDs prevent retries from duplicating entries, including edited/voided imports. IDs do not detect manually entered duplicates or transactions copied into a different fresh template: omit those rows. Existing entries are never overwritten by imports.
+- Preview confirmation is signed with the existing AUTH_SECRET, expires after 15 minutes and is bound to the parsed file. Upload size and decompressed ZIP size are bounded. Formula/error/link cells are rejected. No database migration is needed.
+- Report dropdowns support multiple currencies, account types, accounts, income/expense types, parents and subcategories. Entry journal type/status filters also support multiple selections. Selections use OR within each dropdown and AND between dropdowns, persist in pagination/CSV exports, and count only matching split allocations.
+- Reset filters now navigates to a fresh unfiltered page, clearing both unsaved and applied selections. Category/currency changes clear dependent choices.
+- Dashboard, Reports and Debt & Credit show descriptive zero-value messages. Reports use None for zero table amounts; downloads keep numeric zeros for calculations. Negative balances remain visible.
+- Validation: 90 automated tests, desktop/mobile browser checks for checkbox selection, reset before/after Apply, filtered export links and import preview. XLSX save/reopen checks cover named ranges, dropdown rules, Excel dates, splits, transfers, exchanges and validation failures. A native Excel interaction check and live Hostinger/MySQL import remain unverified locally.

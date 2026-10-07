@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 vi.mock('@/lib/db',()=>({db:{}}));
 import { buildReports,type ReportEntry } from '../services/report-calculation';
 import { reportWhere } from '../services/report-service';
-import { parseReportFilters,reportRange } from '../validation/reports';
+import { parseReportFilters,reportRange,reportQuery,reportParams } from '../validation/reports';
 import { reportCsv,csvCell } from '../lib/report-csv';
 const categories=[{id:'food',name:'Food',parentId:null,type:'EXPENSE',status:'ACTIVE'},{id:'dining',name:'Dining',parentId:'food',type:'EXPENSE',status:'ACTIVE'},{id:'salary',name:'Salary',parentId:null,type:'INCOME',status:'ACTIVE'}];
 const currencies=[{id:'omr',code:'OMR',decimalPlaces:3},{id:'inr',code:'INR',decimalPlaces:2}];
@@ -52,4 +52,12 @@ describe('report filters',()=>{
  it('can restrict a category to entries assigned directly to the parent',()=>{
   expect(reportWhere(parseReportFilters({categoryId:'food',subcategoryId:'__parent__'})).AND).toEqual([{categoryId:'food'}]);
  });
+});
+
+it('round-trips multiple selections into query filters, exports and split totals',()=>{
+ const f=parseReportFilters({currencyId:['omr','inr'],accountId:'cash,bank',type:'INCOME,EXPENSE',categoryId:'food,salary',subcategoryId:'dining,__parent__',accountType:'CASH,BANK'});
+ expect(parseReportFilters(reportParams(new URLSearchParams(reportQuery(f))))).toEqual(f);
+ const q=reportWhere(f);expect(q.currencyId).toEqual({in:['omr','inr']});expect(q.type).toEqual({in:['INCOME','EXPENSE']});expect(q.AND).toEqual([{categoryId:{in:['dining','food','salary']}}]);
+ const r=buildReports(rows,categories,currencies,f);expect(r[0].expense.total).toBe(20.1);expect(r[1].income.total).toBe(0);
+ expect(parseReportFilters(reportParams(new URLSearchParams('accountId=cash&accountId=bank'))).accountId).toBe('cash,bank');
 });

@@ -1,0 +1,10 @@
+"use client";
+import { useEffect, useRef } from "react";
+export function MultiSelect({label,name,value,onChange,options,disabled=false,emptyLabel='All options'}:{label:string;name:string;value:string;onChange:(v:string)=>void;options:{value:string;label:string}[];disabled?:boolean;emptyLabel?:string}) {
+ const ref=useRef<HTMLDetailsElement>(null);const selected=value.split(',').filter(Boolean);
+ useEffect(()=>{const close=(e:MouseEvent)=>{if(!ref.current?.contains(e.target as Node))ref.current?.removeAttribute('open')};document.addEventListener('click',close);return()=>document.removeEventListener('click',close)},[]);
+ return <div className="min-w-0"><p className="mb-2 text-sm font-medium">{label}</p><input type="hidden" name={name} value={disabled?'':value}/><details ref={ref} className="relative" onKeyDown={e=>{if(e.key==='Escape'){ref.current?.removeAttribute('open');ref.current?.querySelector('summary')?.focus()}}}>
+ <summary aria-label={label} aria-disabled={disabled} onClick={e=>{if(disabled)e.preventDefault()}} className={`flex min-h-11 cursor-pointer items-center justify-between gap-2 rounded-xl border p-3 text-sm ${disabled?'opacity-50':''}`}><span className="truncate">{selected.length?`${selected.length} selected`:emptyLabel}</span><span aria-hidden="true">▾</span></summary>
+ {!disabled&&<div className="absolute left-0 right-0 z-30 mt-1 max-h-72 overflow-y-auto rounded-xl border p-3 shadow-lg" style={{background:'var(--surface)',borderColor:'var(--line)'}}><button type="button" className="mb-2 text-sm text-emerald-700" onClick={()=>onChange('')}>Clear selection</button><div role="group" aria-label={`${label} options`}>{options.map(o=><label key={o.value} className="flex min-h-10 cursor-pointer items-center gap-2 text-sm"><input type="checkbox" checked={selected.includes(o.value)} onChange={e=>onChange((e.target.checked?[...selected,o.value]:selected.filter(v=>v!==o.value)).join(','))}/>{o.label}</label>)}{!options.length&&<p className="text-sm text-muted">No matching options.</p>}</div></div>}
+ </details></div>;
+}

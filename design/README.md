@@ -39,3 +39,5 @@ The production deployment requires no new environment variables or schema change
 ## Reports and debt corrections
 
 With the preview running, `node scripts/check-reports.mjs` captures monthly, yearly, subcategory and debt-edit views on desktop/mobile and checks overflow, report headings and debt prefill. Screenshots use fictional fixture data; the preview database does not execute production query filters. Query and calculation behavior is covered separately by the report tests.
+
+`node scripts/check-import-filters.mjs` checks checkbox filters, Reset before/after applying, and import preview on desktop/mobile. Upload responses in this isolated preview use test fixtures; import parsing and authenticated API paths are tested separately.

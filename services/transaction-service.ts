@@ -8,7 +8,7 @@ const actor = () => process.env.LOGIN_USER ?? "system";
 const history = (value: unknown) => JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 const relations = { allocations: true, transfer: true, exchange: true } as const;
 
-function parseEntry(raw: unknown) {
+export function parseEntry(raw: unknown) {
   const { type } = z.object({ type: z.enum(["INCOME", "EXPENSE", "TRANSFER", "EXCHANGE"]) }).parse(raw);
   if (type === "TRANSFER") return { ...transferSchema.parse(raw), type };
   if (type === "EXCHANGE") return { ...exchangeSchema.parse(raw), type };
@@ -59,17 +59,18 @@ async function createLines(tx: Prisma.TransactionClient, id: string, data: Entry
   }
 }
 
-async function createEntry(raw: unknown) {
+export async function createEntryInTransaction(tx: Prisma.TransactionClient, raw: unknown, reference?: string) {
   const data = parseEntry(raw);
-  return db.$transaction(async (tx) => {
-    const currencyId = await validateEntry(tx, data);
-    const prefix = { INCOME: "INC", EXPENSE: "EXP", TRANSFER: "TRF", EXCHANGE: "EXC" }[data.type];
-    const entry = await tx.transaction.create({ data: { ...entryValues(data, currencyId), reference: makeReference(prefix) } });
-    await createLines(tx, entry.id, data);
-    const after = await tx.transaction.findUniqueOrThrow({ where: { id: entry.id }, include: relations });
-    await tx.auditLog.create({ data: { recordType: "Transaction", recordId: entry.id, action: "CREATE", afterData: history(after), changedBy: actor() } });
-    return after;
-  });
+  const currencyId = await validateEntry(tx, data);
+  const prefix = { INCOME: "INC", EXPENSE: "EXP", TRANSFER: "TRF", EXCHANGE: "EXC" }[data.type];
+  const entry = await tx.transaction.create({ data: { ...entryValues(data, currencyId), reference: reference ?? makeReference(prefix) } });
+  await createLines(tx, entry.id, data);
+  const after = await tx.transaction.findUniqueOrThrow({ where: { id: entry.id }, include: relations });
+  await tx.auditLog.create({ data: { recordType: "Transaction", recordId: entry.id, action: "CREATE", afterData: history(after), changedBy: actor() } });
+  return after;
+}
+async function createEntry(raw: unknown) {
+  return db.$transaction(tx => createEntryInTransaction(tx, raw));
 }
 
 export const createNormalEntry = createEntry;

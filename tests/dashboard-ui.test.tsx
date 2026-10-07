@@ -25,3 +25,5 @@ it("keeps OMR precision and Indian rupee grouping", () => {
   expect(money(201.545,"OMR")).toContain("201.545");
   expect(money(1234567.5,"INR")).toContain("12,34,567.50");
 });
+
+it("uses meaningful zero messages without hiding negative debt balances",()=>{render(<DashboardOverview position={[{...position[0],balance:0,available:0,receivable:0,payable:-5}]} activity={[]} monthLabel="October 2026"/>);expect(screen.getByText('No net balance')).toBeTruthy();expect(screen.getByText('No available funds')).toBeTruthy();expect(screen.getByText('Nothing to receive')).toBeTruthy();expect(screen.getByText('No income this period')).toBeTruthy();expect(screen.queryByText('No outstanding debt')).toBeNull();expect(screen.getByText((_,el)=>el?.tagName==='STRONG'&&el.textContent===money(-5,'OMR',3))).toBeTruthy()});

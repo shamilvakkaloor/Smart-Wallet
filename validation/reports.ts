@@ -1,5 +1,9 @@
 import { z } from "zod";
-const optionalText = z.string().max(200).default("");
+export const selections = (value: string) => value.split(",").filter(Boolean);
+export const matchesSelection = (value: string, candidate: string) => !value || selections(value).includes(candidate);
+const selection = (allowed?: string[]) => z.preprocess(v => Array.isArray(v) ? v.join(",") : v,
+  z.string().max(20000).default("").refine(v => selections(v).length <= 200 && selections(v).every(x => x.length <= 200 && (!allowed || allowed.includes(x))), "Choose valid filter options."));
+const optionalText = selection();
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(s => { const d=new Date(s); return !Number.isNaN(d.getTime()) && d.toISOString().slice(0,10)===s; }, "Choose a valid date.");
 const optionalAmount = z.preprocess(v => v === "" || v === undefined ? undefined : v, z.coerce.number().finite().nonnegative().max(999999999999).optional());
 export function parseReportFilters(raw: Record<string, unknown>, now = new Date()) {
@@ -8,8 +12,8 @@ export function parseReportFilters(raw: Record<string, unknown>, now = new Date(
     year: z.coerce.number().int().min(1900).max(9998).default(now.getFullYear()),
     month: z.coerce.number().int().min(1).max(12).default(now.getMonth()+1),
     from: z.union([date,z.literal("")]).default(""), to: z.union([date,z.literal("")]).default(""),
-    currencyId: optionalText, accountId: optionalText, accountType: z.enum(["","CASH","BANK"]).default(""),
-    type: z.enum(["","INCOME","EXPENSE"]).default(""), categoryId: optionalText, subcategoryId: optionalText,
+    currencyId: optionalText, accountId: optionalText, accountType: selection(["CASH","BANK"]),
+    type: selection(["INCOME","EXPENSE"]), categoryId: optionalText, subcategoryId: optionalText,
     grouping: z.enum(["category","subcategory"]).default("category"), q: z.string().trim().max(200).default(""),
     min: optionalAmount, max: optionalAmount, showZero: z.enum(["","1"]).default(""), page: z.coerce.number().int().min(1).max(1000000).default(1),
   }).superRefine((f,ctx) => {
@@ -28,4 +32,8 @@ export function reportQuery(f: ReportFilters, changes: Record<string,string | nu
   const params=new URLSearchParams();
   for(const [key,value] of Object.entries({...f,...changes})) if(value !== undefined && value !== "")params.set(key,String(value));
   return params.toString();
+}
+
+export function reportParams(params: URLSearchParams) {
+  return Object.fromEntries([...new Set(params.keys())].map(key => [key, params.getAll(key).join(",")]));
 }
