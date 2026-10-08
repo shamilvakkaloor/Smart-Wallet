@@ -1,0 +1,13 @@
+import {beforeEach,expect,it,vi} from 'vitest';
+const m=vi.hoisted(()=>({auth:vi.fn(),find:vi.fn(),update:vi.fn(),get:vi.fn(),audit:vi.fn(),transaction:vi.fn()}));
+vi.mock('@/lib/auth',()=>({auth:m.auth}));vi.mock('next/cache',()=>({revalidatePath:vi.fn()}));
+vi.mock('@/lib/db',()=>({db:{$transaction:m.transaction}}));
+import {voidTransactions} from '../services/transaction-service';
+import {DELETE} from '../app/api/entries/bulk/route';
+const date='2026-10-01T00:00:00.000Z';const rows=['a','b'].map(id=>({id,reference:`IMP-${id}`,status:'ACTIVE',updatedAt:new Date(date),allocations:[{amount:10}],transfer:null,exchange:null}));const items=rows.map(r=>({id:r.id,updatedAt:date}));
+beforeEach(()=>{vi.resetAllMocks();m.transaction.mockImplementation(fn=>fn({transaction:{findMany:m.find,updateMany:m.update,findUniqueOrThrow:m.get},auditLog:{create:m.audit}}));m.find.mockResolvedValue(rows);m.update.mockResolvedValue({count:1});m.get.mockImplementation(({where})=>({...rows.find(r=>r.id===where.id),status:'VOIDED'}))});
+it('voids all selected entries in one transaction with before/after audits',async()=>{expect(await voidTransactions({items})).toEqual({deleted:2});expect(m.transaction).toHaveBeenCalledTimes(1);expect(m.update).toHaveBeenCalledTimes(2);expect(m.audit.mock.calls[0][0].data).toMatchObject({action:'VOID',beforeData:{status:'ACTIVE',allocations:[{amount:10}]},afterData:{status:'VOIDED'}})});
+it('rejects stale or missing entries before writing anything',async()=>{m.find.mockResolvedValue([{...rows[0],updatedAt:new Date('2026-10-02')},rows[1]]);await expect(voidTransactions({items})).rejects.toThrow('changed');expect(m.update).not.toHaveBeenCalled();m.find.mockResolvedValue([rows[0]]);await expect(voidTransactions({items})).rejects.toThrow('changed')});
+it('rejects empty, duplicate and oversized selections',async()=>{for(const selected of [[],[items[0],items[0]],Array.from({length:201},(_,i)=>({id:String(i),updatedAt:date}))])await expect(voidTransactions({items:selected})).rejects.toThrow();expect(m.transaction).not.toHaveBeenCalled()});
+it('throws inside the transaction on a concurrent update, rolling back the batch',async()=>{m.update.mockResolvedValueOnce({count:1}).mockResolvedValueOnce({count:0});await expect(voidTransactions({items})).rejects.toThrow('Nothing was deleted')});
+it('protects the endpoint and returns validation errors without writing',async()=>{const request=()=>new Request('http://localhost/api/entries/bulk',{method:'DELETE',body:JSON.stringify({items:[]})});expect((await DELETE(request())).status).toBe(401);expect(m.transaction).not.toHaveBeenCalled();m.auth.mockResolvedValue({user:{name:'test'}});expect((await DELETE(request())).status).toBe(400);expect(m.transaction).not.toHaveBeenCalled()});

@@ -111,3 +111,19 @@ export async function voidTransaction(id: string) {
     return after;
   });
 }
+
+export async function voidTransactions(raw: unknown) {
+  const { items } = z.object({ items: z.array(z.object({ id: z.string().min(1).max(200), updatedAt: z.string().datetime() })).min(1).max(200).refine(rows => new Set(rows.map(r => r.id)).size === rows.length, "Choose each entry only once.") }).parse(raw);
+  return db.$transaction(async tx => {
+    const rows = await tx.transaction.findMany({ where: { id: { in: items.map(i => i.id) } }, include: relations });
+    const versions = new Map(items.map(i => [i.id, new Date(i.updatedAt).getTime()]));
+    if (rows.length !== items.length || rows.some(r => r.status !== "ACTIVE" || r.updatedAt.getTime() !== versions.get(r.id))) throw new Error("Some selected entries changed or were deleted. Refresh and select them again. Nothing was deleted.");
+    for (const before of rows) {
+      const changed = await tx.transaction.updateMany({ where: { id: before.id, status: "ACTIVE", updatedAt: before.updatedAt }, data: { status: "VOIDED", updatedAt: new Date(Math.max(Date.now(), before.updatedAt.getTime()+1)) } });
+      if (changed.count !== 1) throw new Error("An entry changed. Refresh and try again. Nothing was deleted.");
+      const after = await tx.transaction.findUniqueOrThrow({ where: { id: before.id }, include: relations });
+      await tx.auditLog.create({ data: { recordType: "Transaction", recordId: before.id, action: "VOID", beforeData: history(before), afterData: history(after), changedBy: actor() } });
+    }
+    return { deleted: rows.length };
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable, timeout: 60000 });
+}
