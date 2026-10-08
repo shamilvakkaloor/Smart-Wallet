@@ -97,3 +97,8 @@ The database schema already contains the stable entities needed for these extens
 - Entries > Deleted entries > Review & restore opens the original record. Restore entry requires confirmation and restores its effect on balances and reports, preserving reference, allocations, attachments and history.
 - Restoration checks the displayed version and VOIDED status atomically and writes a RESTORE audit. No schema migration is required. No production entries were restored automatically.
 - Individual deletion remains on the detail page with confirmation. Import IDs stay reserved after deletion; restoring the original avoids creating a replacement duplicate.
+
+## Excel import cleanup
+
+- Import Excel has a separate Review all Excel imports section with count and typed confirmation. It voids all active IMP- entries across dates/currencies without the journal limit. Manual entries are excluded.
+- Preview versions are checked in a serializable transaction; each void retains ledger lines and writes an audit. Deleted imports remain individually recoverable. The general bulk journal endpoint stays disabled.

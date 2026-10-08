@@ -1,0 +1,12 @@
+import {beforeEach,expect,it,vi} from "vitest";
+const m=vi.hoisted(()=>({find:vi.fn(),update:vi.fn(),audit:vi.fn(),transaction:vi.fn(),auth:vi.fn()}));
+vi.mock("@/lib/db",()=>({db:{transaction:{findMany:m.find},$transaction:m.transaction}}));
+vi.mock("@/lib/auth",()=>({auth:m.auth}));vi.mock("next/cache",()=>({revalidatePath:vi.fn()}));
+import {previewImportCleanup,voidAllExcelImports} from "../services/import-cleanup-service";
+import {GET,DELETE} from "../app/api/import/cleanup/route";
+const rows=Array.from({length:205},(_,i)=>({id:String(i),reference:`IMP-${i}`,status:"ACTIVE",updatedAt:new Date("2026-10-01"),allocations:[{amount:10}],transfer:null,exchange:null}));
+beforeEach(()=>{vi.resetAllMocks();m.find.mockResolvedValue(rows);m.update.mockResolvedValue({count:1});m.transaction.mockImplementation(fn=>fn({transaction:{findMany:m.find,updateMany:m.update},auditLog:{create:m.audit}}))});
+it("voids more than the journal limit with import-only predicates and individual audits",async()=>{const preview=await previewImportCleanup();expect(preview.count).toBe(205);expect(await voidAllExcelImports({...preview,confirmation:"VOID ALL EXCEL IMPORTS"})).toEqual({voided:205});expect(m.find.mock.calls[0][0].where).toEqual({status:"ACTIVE",reference:{startsWith:"IMP-"}});expect(m.update.mock.calls[0][0].where).toMatchObject({id:"0",status:"ACTIVE",reference:{startsWith:"IMP-"}});expect(m.audit).toHaveBeenCalledTimes(205);expect(m.audit.mock.calls[0][0].data).toMatchObject({action:"VOID",beforeData:{allocations:[{amount:10}],status:"ACTIVE"},afterData:{status:"VOIDED"}})});
+it("rejects changed preview before any write",async()=>{const p=await previewImportCleanup();m.find.mockResolvedValue(rows.slice(1));await expect(voidAllExcelImports({...p,confirmation:"VOID ALL EXCEL IMPORTS"})).rejects.toThrow("changed");expect(m.update).not.toHaveBeenCalled()});
+it("throws inside transaction on a concurrent edit and does not audit that edit",async()=>{const p=await previewImportCleanup();m.update.mockResolvedValue({count:0});await expect(voidAllExcelImports({...p,confirmation:"VOID ALL EXCEL IMPORTS"})).rejects.toThrow("Nothing was voided");expect(m.audit).not.toHaveBeenCalled()});
+it("requires explicit confirmation and authentication",async()=>{await expect(voidAllExcelImports({version:"a".repeat(64),confirmation:"yes"})).rejects.toThrow();expect((await GET()).status).toBe(401);expect((await DELETE(new Request("http://localhost",{method:"DELETE",body:"{}"}))).status).toBe(401);expect(m.transaction).not.toHaveBeenCalled()});
