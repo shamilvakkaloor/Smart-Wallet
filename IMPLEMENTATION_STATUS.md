@@ -91,8 +91,9 @@ The database schema already contains the stable entities needed for these extens
 - Dashboard, Reports and Debt & Credit show descriptive zero-value messages. Reports use None for zero table amounts; downloads keep numeric zeros for calculations. Negative balances remain visible.
 - Validation: 90 automated tests, desktop/mobile browser checks for checkbox selection, reset before/after Apply, filtered export links and import preview. XLSX save/reopen checks cover named ranges, dropdown rules, Excel dates, splits, transfers, exchanges and validation failures. A native Excel interaction check and live Hostinger/MySQL import remain unverified locally.
 
-## Bulk entry deletion
+## Entry deletion and recovery
 
-- Entries supports individual checkboxes, Select all active entries shown (up to 200), and confirmed Delete selected. The Source filter can restrict the journal to Excel imports.
-- The server validates selected IDs and their displayed versions, then voids the complete selection in one serializable transaction with before/after audits. Missing, stale or concurrently edited records abort the batch. Voided entries no longer affect balances and remain in Deleted entries.
-- Import IDs remain reserved after deletion. For a corrected replacement import, use a fresh template; retries of the original IDs remain skipped.
+- Bulk selection and Delete selected were removed from Entries to reduce accidental deletion. The old bulk endpoint returns 410, including for stale browser sessions.
+- Entries > Deleted entries > Review & restore opens the original record. Restore entry requires confirmation and restores its effect on balances and reports, preserving reference, allocations, attachments and history.
+- Restoration checks the displayed version and VOIDED status atomically and writes a RESTORE audit. No schema migration is required. No production entries were restored automatically.
+- Individual deletion remains on the detail page with confirmation. Import IDs stay reserved after deletion; restoring the original avoids creating a replacement duplicate.
