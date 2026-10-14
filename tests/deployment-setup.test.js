@@ -1,5 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
-import { prepareDatabase } from "../scripts/prepare-database.mjs";
+import { prepareDatabase, ensureSchemaEngineExecutable } from "../scripts/prepare-database.mjs";
+
+describe("Prisma schema engine deployment permissions", () => {
+  it("restores owner execute permission without opening write access", () => {
+    const io = {
+      readdirSync: vi.fn().mockReturnValue(["schema-engine-debian-openssl-1.1.x", "schema-engine-windows.exe", "package.json"]),
+      statSync: vi.fn().mockReturnValue({ isFile: () => true, mode: 0o100644 }),
+      chmodSync: vi.fn(),
+    };
+    ensureSchemaEngineExecutable("linux", io);
+    expect(io.chmodSync).toHaveBeenCalledExactlyOnceWith(expect.stringContaining("schema-engine-debian-openssl-1.1.x"), 0o744);
+  });
+  it("leaves executable engines unchanged", () => {
+    const io = {
+      readdirSync: vi.fn().mockReturnValue(["schema-engine-debian-openssl-1.1.x"]),
+      statSync: vi.fn().mockReturnValue({ isFile: () => true, mode: 0o100755 }),
+      chmodSync: vi.fn(),
+    };
+    ensureSchemaEngineExecutable("linux", io);
+    expect(io.chmodSync).not.toHaveBeenCalled();
+  });
+  it("does not change Windows file permissions", () => {
+    const io = { readdirSync: vi.fn() };
+    ensureSchemaEngineExecutable("win32", io);
+    expect(io.readdirSync).not.toHaveBeenCalled();
+  });
+});
 
 describe("optional deployment database setup", () => {
   it("does not touch a database unless explicitly enabled", () => {
